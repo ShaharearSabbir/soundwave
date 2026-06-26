@@ -214,13 +214,43 @@ export default function LibraryPage() {
                     </div>
                   )}
 
-                  {playlists.length === 0 ? (
-                    <div className="bg-[#1e1e2e]/50 rounded-xl p-10 text-center border border-[#363650]/20">
-                      <svg className="w-14 h-14 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.2} viewBox="0 0 24 24">
-                        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                      <p className="text-gray-400 text-sm mb-1">No playlists yet</p>
-                      <p className="text-gray-600 text-xs">Create one to organize your music</p>
+                  {playlists.length === 0 && !showCreatePlaylist ? (
+                    <button
+                      onClick={() => setShowCreatePlaylist(true)}
+                      className="w-full bg-[#1e1e2e]/50 hover:bg-[#1e1e2e]/80 border-2 border-dashed border-[#363650]/40 hover:border-primary-500/50 rounded-xl p-12 text-center transition-all group cursor-pointer"
+                    >
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#2a2a3e] group-hover:bg-primary-500/20 flex items-center justify-center transition-colors">
+                        <svg className="w-8 h-8 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                          <path d="M12 4v16m8-8H4" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-300 text-lg font-medium mb-1">Create your first playlist</p>
+                      <p className="text-gray-500 text-sm">Organize your saved tracks into custom playlists</p>
+                    </button>
+                  ) : playlists.length === 0 && showCreatePlaylist ? (
+                    <div className="mb-5 p-4 bg-[#1e1e2e]/50 rounded-xl border border-[#363650]/30 flex gap-2">
+                      <input
+                        type="text"
+                        value={newPlaylistName}
+                        onChange={(e) => setNewPlaylistName(e.target.value)}
+                        placeholder="Playlist name"
+                        className="flex-1 px-3 py-2 bg-[#2a2a3e] border border-[#363650] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 text-sm"
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreatePlaylist()}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCreatePlaylist}
+                        disabled={!newPlaylistName.trim()}
+                        className="px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
+                      >
+                        Create
+                      </button>
+                      <button
+                        onClick={() => { setShowCreatePlaylist(false); setNewPlaylistName(''); }}
+                        className="px-4 py-2 bg-[#363650] text-gray-300 rounded-lg text-sm hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
