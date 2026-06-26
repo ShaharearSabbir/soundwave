@@ -84,6 +84,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const currentTrackRef = useRef<TrackInfo | null>(null);
   const scheduledNextRef = useRef<TrackInfo | null>(null);
   const nextTrackRef = useRef<() => void>(() => {});
+  const [playHistory, setPlayHistory] = useState<TrackInfo[]>([]);
+  const playHistoryRef = useRef<TrackInfo[]>([]);
 
   useEffect(() => {
     isLoopingRef.current = isLooping;
@@ -96,6 +98,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     currentTrackRef.current = currentTrack;
   }, [currentTrack]);
+
+  useEffect(() => {
+    playHistoryRef.current = playHistory;
+  }, [playHistory]);
 
   const createPlayer = useCallback(() => {
     if (playerRef.current || !containerRef.current || !window.YT) return;
@@ -203,6 +209,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const play = useCallback((track: TrackInfo) => {
+    const prev = currentTrackRef.current;
+    if (prev && prev.videoId !== track.videoId) {
+      setPlayHistory((h) => {
+        const next = [...h, prev];
+        return next.length > 50 ? next.slice(-50) : next;
+      });
+    }
     loadTrack(track);
   }, [loadTrack]);
 
@@ -244,6 +257,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const nextTrack = useCallback(() => {
+    const prev = currentTrackRef.current;
+    if (prev) {
+      setPlayHistory((h) => {
+        const next = [...h, prev];
+        return next.length > 50 ? next.slice(-50) : next;
+      });
+    }
     setQueue((q) => {
       if (q.length === 0) return q;
       const next = q[0];
@@ -264,9 +284,15 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       if (p.getCurrentTime() > 3) {
         p.seekTo(0, true);
         setCurrentTime(0);
+        return;
       }
     } catch {}
-  }, []);
+    const history = playHistoryRef.current;
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setPlayHistory((h) => h.slice(0, -1));
+    loadTrack(last);
+  }, [loadTrack]);
 
   const value: AudioContextType = {
     currentTrack, isPlaying, volume, currentTime, duration, isLooping, queue,

@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAudio, type TrackInfo } from '@/lib/audio-context';
-import { addSavedTrack as saveTrack, removeSavedTrack, isTrackSaved, addTrackToPlaylist, getPlaylists, createPlaylist, type Playlist } from '@/lib/db';
+import { addSavedTrack as saveTrack, removeSavedTrack, isTrackSaved, addTrackToPlaylist, getPlaylists, createPlaylist, cacheTrackMeta, type Playlist } from '@/lib/db';
 
 interface TrackCardProps {
   track: TrackInfo;
+  onPlay?: (track: TrackInfo) => void;
+  onRemoveFromPlaylist?: (videoId: string) => void;
+  addedPlaylistIds?: number[];
 }
 
-export default function TrackCard({ track }: TrackCardProps) {
+export default function TrackCard({ track, onPlay, onRemoveFromPlaylist, addedPlaylistIds }: TrackCardProps) {
   const { play, currentTrack, isPlaying, togglePlay, addToQueue } = useAudio();
   const [saved, setSaved] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -45,6 +48,8 @@ export default function TrackCard({ track }: TrackCardProps) {
   const handlePlay = () => {
     if (isCurrentTrack) {
       togglePlay();
+    } else if (onPlay) {
+      onPlay(track);
     } else {
       play(track);
     }
@@ -77,8 +82,19 @@ export default function TrackCard({ track }: TrackCardProps) {
     window.dispatchEvent(new CustomEvent('playlist-changed'));
   };
 
+  const cacheTrack = async () => {
+    await cacheTrackMeta({
+      videoId: track.videoId,
+      title: track.title,
+      creator: track.creator,
+      duration: track.duration,
+      thumbnail: track.thumbnail,
+    });
+  };
+
   const handleAddToPlaylist = async (e: React.MouseEvent, playlistId: number, name: string) => {
     e.stopPropagation();
+    await cacheTrack();
     await addTrackToPlaylist(playlistId, track.videoId);
     notifyPlaylistChange();
     setAddedMsg(`Added to "${name}"`);
@@ -96,6 +112,7 @@ export default function TrackCard({ track }: TrackCardProps) {
   const handleCreateAndAdd = async () => {
     const name = newName.trim() || track.title;
     const pl = await createPlaylist(name);
+    await cacheTrack();
     await addTrackToPlaylist(pl.id!, track.videoId);
     notifyPlaylistChange();
     setAddedMsg(`Created "${name}"`);
@@ -142,7 +159,7 @@ export default function TrackCard({ track }: TrackCardProps) {
           <p className="text-[11px] text-gray-500 mt-1">{track.duration}</p>
         )}
       </div>
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-2 flex gap-1">
         <button
           onClick={handleSave}
           className={`p-1.5 rounded-full transition-colors shadow-lg ${
@@ -180,43 +197,64 @@ export default function TrackCard({ track }: TrackCardProps) {
                 Add to queue
               </button>
               <div className="h-px bg-[#363650]/40 mx-3" />
-              {playlists.length === 0 ? (
+
+              {onRemoveFromPlaylist && (
                 <button
-                  onClick={openCreateDialog}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-200 hover:bg-[#363650]/30 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); onRemoveFromPlaylist(track.videoId); setShowDropdown(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-400 hover:bg-[#363650]/30 transition-colors"
                 >
-                  <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path d="M12 4v16m8-8H4" />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Create playlist
+                  Remove from playlist
                 </button>
-              ) : (
-                <>
-                  <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Playlists</p>
-                  {playlists.map((pl) => (
-                    <button
-                      key={pl.id}
-                      onClick={(e) => handleAddToPlaylist(e, pl.id!, pl.name)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-[#363650]/30 transition-colors truncate"
-                    >
-                      <svg className="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                      {pl.name}
-                    </button>
-                  ))}
-                  <div className="h-px bg-[#363650]/40 mx-3" />
-                  <button
-                    onClick={openCreateDialog}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-400 hover:text-gray-200 hover:bg-[#363650]/30 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path d="M12 4v16m8-8H4" />
-                    </svg>
-                    New playlist
-                  </button>
-                </>
               )}
+
+              {onRemoveFromPlaylist && <div className="h-px bg-[#363650]/40 mx-3" />}
+
+              {(() => {
+                const filtered = playlists.filter((pl) => !addedPlaylistIds || !addedPlaylistIds.includes(pl.id!));
+                if (filtered.length === 0) {
+                  return (
+                    <button
+                      onClick={openCreateDialog}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-200 hover:bg-[#363650]/30 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create playlist
+                    </button>
+                  );
+                }
+                return (
+                  <>
+                    <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Playlists</p>
+                    {filtered.map((pl) => (
+                      <button
+                        key={pl.id}
+                        onClick={(e) => handleAddToPlaylist(e, pl.id!, pl.name)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-[#363650]/30 transition-colors truncate"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                          <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                        {pl.name}
+                      </button>
+                    ))}
+                    <div className="h-px bg-[#363650]/40 mx-3" />
+                    <button
+                      onClick={openCreateDialog}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-400 hover:text-gray-200 hover:bg-[#363650]/30 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path d="M12 4v16m8-8H4" />
+                      </svg>
+                      New playlist
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
