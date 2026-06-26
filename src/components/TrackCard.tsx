@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAudio, type TrackInfo } from '@/lib/audio-context';
-import { addSavedTrack as saveTrack, removeSavedTrack, isTrackSaved } from '@/lib/db';
+import { addSavedTrack as saveTrack, removeSavedTrack, isTrackSaved, addTrackToPlaylist, getPlaylists, createPlaylist, type Playlist } from '@/lib/db';
 
 interface TrackCardProps {
   track: TrackInfo;
@@ -11,10 +11,27 @@ interface TrackCardProps {
 export default function TrackCard({ track }: TrackCardProps) {
   const { play, currentTrack, isPlaying, togglePlay, addToQueue } = useAudio();
   const [saved, setSaved] = useState(false);
+  const [showPlaylists, setShowPlaylists] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [addedMsg, setAddedMsg] = useState('');
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     isTrackSaved(track.videoId).then(setSaved);
   }, [track.videoId]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setShowPlaylists(false);
+      }
+    };
+    if (showPlaylists) {
+      document.addEventListener('mousedown', handleClick);
+      getPlaylists().then(setPlaylists);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showPlaylists]);
 
   const isCurrentTrack = currentTrack?.videoId === track.videoId;
 
@@ -46,6 +63,23 @@ export default function TrackCard({ track }: TrackCardProps) {
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToQueue(track);
+  };
+
+  const handleAddToPlaylist = async (e: React.MouseEvent, playlistId: number, name: string) => {
+    e.stopPropagation();
+    await addTrackToPlaylist(playlistId, track.videoId);
+    setAddedMsg(`Added to "${name}"`);
+    setShowPlaylists(false);
+    setTimeout(() => setAddedMsg(''), 2000);
+  };
+
+  const handleCreateAndAdd = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const pl = await createPlaylist(track.title);
+    await addTrackToPlaylist(pl.id!, track.videoId);
+    setAddedMsg(`Created "${pl.name}"`);
+    setShowPlaylists(false);
+    setTimeout(() => setAddedMsg(''), 2000);
   };
 
   return (
@@ -107,7 +141,55 @@ export default function TrackCard({ track }: TrackCardProps) {
             <path d="M12 4v16m8-8H4" />
           </svg>
         </button>
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowPlaylists(!showPlaylists); }}
+            className="p-1.5 rounded-full bg-black/60 text-white hover:bg-primary-500 transition-colors shadow-lg"
+            title="Add to playlist"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </button>
+          {showPlaylists && (
+            <div
+              ref={popoverRef}
+              className="absolute right-0 top-full mt-1 w-44 bg-[#1e1e2e] border border-[#363650]/50 rounded-xl shadow-2xl z-50 py-1 max-h-48 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {playlists.length === 0 ? (
+                <button
+                  onClick={handleCreateAndAdd}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#363650]/30 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create playlist
+                </button>
+              ) : (
+                playlists.map((pl) => (
+                  <button
+                    key={pl.id}
+                    onClick={(e) => handleAddToPlaylist(e, pl.id!, pl.name)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#363650]/30 transition-colors truncate"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                    {pl.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
+      {addedMsg && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-primary-500 text-white text-[10px] px-2 py-1 rounded-lg shadow-lg whitespace-nowrap z-50">
+          {addedMsg}
+        </div>
+      )}
     </div>
   );
 }
