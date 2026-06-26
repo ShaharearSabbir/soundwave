@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const GENRES = [
@@ -56,7 +57,7 @@ export default function NavBar({ onGenreSelect }: NavBarProps) {
 
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
@@ -70,7 +71,7 @@ export default function NavBar({ onGenreSelect }: NavBarProps) {
                 <path d={link.icon} />
               </svg>
               {link.label}
-            </a>
+            </Link>
           ))}
 
           <div className="pt-4 pb-2">
