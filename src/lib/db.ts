@@ -10,6 +10,14 @@ export interface SavedTrack {
   dateAdded: Date;
 }
 
+export interface TrackMeta {
+  videoId: string;
+  title: string;
+  creator: string;
+  duration: string;
+  thumbnail: string;
+}
+
 export interface Playlist {
   id?: number;
   name: string;
@@ -19,17 +27,29 @@ export interface Playlist {
 class SoundwaveDB extends Dexie {
   savedTracks!: Table<SavedTrack, number>;
   playlists!: Table<Playlist, number>;
+  trackCache!: Table<TrackMeta, string>;
 
   constructor() {
     super('soundwave');
-    this.version(1).stores({
+    this.version(2).stores({
       savedTracks: '++id, videoId, title, dateAdded',
       playlists: '++id, name',
+      trackCache: 'videoId',
     });
   }
 }
 
 export const db = new SoundwaveDB();
+
+export async function cacheTrackMeta(track: TrackMeta) {
+  await db.trackCache.put(track);
+}
+
+export async function getTrackMeta(videoId: string): Promise<TrackMeta | undefined> {
+  const saved = await db.savedTracks.where('videoId').equals(videoId).first();
+  if (saved) return saved;
+  return db.trackCache.get(videoId);
+}
 
 export async function addSavedTrack(track: Omit<SavedTrack, 'id' | 'dateAdded'>) {
   const existing = await db.savedTracks.where('videoId').equals(track.videoId).first();
