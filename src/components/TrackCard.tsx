@@ -73,9 +73,14 @@ export default function TrackCard({ track }: TrackCardProps) {
     setShowDropdown(false);
   };
 
+  const notifyPlaylistChange = () => {
+    window.dispatchEvent(new CustomEvent('playlist-changed'));
+  };
+
   const handleAddToPlaylist = async (e: React.MouseEvent, playlistId: number, name: string) => {
     e.stopPropagation();
     await addTrackToPlaylist(playlistId, track.videoId);
+    notifyPlaylistChange();
     setAddedMsg(`Added to "${name}"`);
     setShowDropdown(false);
     setTimeout(() => setAddedMsg(''), 2000);
@@ -92,6 +97,7 @@ export default function TrackCard({ track }: TrackCardProps) {
     const name = newName.trim() || track.title;
     const pl = await createPlaylist(name);
     await addTrackToPlaylist(pl.id!, track.videoId);
+    notifyPlaylistChange();
     setAddedMsg(`Created "${name}"`);
     setShowCreateDialog(false);
     setNewName('');

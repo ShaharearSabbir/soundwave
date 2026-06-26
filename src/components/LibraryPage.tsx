@@ -27,6 +27,9 @@ export default function LibraryPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
+    const handler = () => loadData();
+    window.addEventListener('playlist-changed', handler);
+    return () => window.removeEventListener('playlist-changed', handler);
   }, []);
 
   const handleCreatePlaylist = async () => {
@@ -46,6 +49,7 @@ export default function LibraryPage() {
   const handleRemoveFromPlaylist = async (videoId: string) => {
     if (!selectedPlaylist?.id) return;
     await removeTrackFromPlaylist(selectedPlaylist.id, videoId);
+    window.dispatchEvent(new CustomEvent('playlist-changed'));
     const pls = await getPlaylists();
     setPlaylists(pls);
     const pl = pls.find((p) => p.id === selectedPlaylist.id);
