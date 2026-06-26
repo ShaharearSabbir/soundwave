@@ -136,7 +136,7 @@ export default function LibraryPage() {
               )}
 
               {tab === 'playlists' && (
-                <>
+                <>{playlists.length > 0 && (
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-sm text-gray-400">Organize your music into playlists</p>
                     <button
@@ -149,8 +149,9 @@ export default function LibraryPage() {
                       New Playlist
                     </button>
                   </div>
+                )}
 
-                  {showCreatePlaylist && (
+                  {showCreatePlaylist && playlists.length > 0 && (
                     <div className="mb-5 p-4 bg-[#1e1e2e]/50 rounded-xl border border-[#363650]/30 flex gap-2">
                       <input
                         type="text"
