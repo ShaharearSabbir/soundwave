@@ -46,7 +46,9 @@ export default function LibraryPage() {
   const handleRemoveFromPlaylist = async (videoId: string) => {
     if (!selectedPlaylist?.id) return;
     await removeTrackFromPlaylist(selectedPlaylist.id, videoId);
-    const pl = await getPlaylists().then((pls) => pls.find((p) => p.id === selectedPlaylist.id));
+    const pls = await getPlaylists();
+    setPlaylists(pls);
+    const pl = pls.find((p) => p.id === selectedPlaylist.id);
     if (pl) {
       setSelectedPlaylist(pl);
       const allTracks = await getSavedTracks();
