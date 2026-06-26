@@ -22,21 +22,32 @@ export default function MediaPlayer() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-[#2a2a3e]/95 backdrop-blur-xl border-t border-[#363650]/30 z-50">
-      <div className="flex items-center gap-3 px-4 h-[72px] max-w-[calc(100vw-16rem)]">
-        <div className="flex items-center gap-3 min-w-0 w-56 flex-shrink-0">
+      <div
+        className="absolute top-0 left-0 right-0 h-0.5 bg-[#424264] cursor-pointer lg:top-auto lg:bottom-full"
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pct = (e.clientX - rect.left) / rect.width;
+          seek(pct * duration);
+        }}
+      >
+        <div className="h-full bg-primary-400 transition-all" style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="flex items-center gap-2 px-2 h-[60px] lg:px-4 lg:h-[72px] lg:gap-3">
+        <div className="flex items-center gap-2 min-w-0 flex-1 lg:flex-none lg:w-56">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={currentTrack.thumbnail}
             alt={currentTrack.title}
-            className="w-11 h-11 rounded-lg object-cover flex-shrink-0 shadow-lg"
+            className="w-10 h-10 lg:w-11 lg:h-11 rounded-lg object-cover flex-shrink-0 shadow-lg"
           />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate leading-tight">{currentTrack.title}</p>
-            <p className="text-xs text-gray-400 truncate">{currentTrack.creator}</p>
+            <p className="text-sm font-medium text-white truncate leading-tight max-w-[120px] lg:max-w-none">{currentTrack.title}</p>
+            <p className="text-xs text-gray-400 truncate max-w-[120px] lg:max-w-none">{currentTrack.creator}</p>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center gap-0.5 max-w-2xl mx-auto">
+        <div className="hidden lg:flex flex-1 flex-col items-center gap-0.5 max-w-2xl mx-auto">
           <div className="flex items-center gap-4">
             <button onClick={prevTrack} className="text-gray-400 hover:text-white transition-colors" title="Previous">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -80,16 +91,7 @@ export default function MediaPlayer() {
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          <button
-            onClick={toggleLoop}
-            className={`transition-colors ${isLooping ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
-            title="Loop"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
-            </svg>
-          </button>
-          <div className="flex items-center gap-1.5 text-gray-400">
+          <div className="hidden lg:flex items-center gap-1.5 text-gray-400">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
             </svg>
@@ -103,6 +105,21 @@ export default function MediaPlayer() {
               className="w-20 h-1 accent-primary-400 cursor-pointer"
             />
           </div>
+          <button
+            onClick={togglePlay}
+            className="lg:hidden bg-white text-black rounded-full p-2 shadow-lg"
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
     </div>
